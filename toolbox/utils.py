@@ -127,3 +127,22 @@ def extract_node_type_from_table(table: pl.DataFrame, node2colmap: Node2ColMap) 
     node_table = pl.concat([id_df, attributes_df], how='horizontal')
 
     return node_table.unique()
+
+
+def extract_edge_type_from_table(table: pl.DataFrame, edge2colmap: Edge2ColMap) -> pl.DataFrame:
+    source = edge2colmap.source
+    target = edge2colmap.target
+    edge_attributes = edge2colmap.attributes
+
+    source_df = table.select(source).rename({source: 'source'})
+    target_df = table.select(target).rename({target: 'target'})
+
+    rename_attributes = {v: k for k, v in edge_attributes.items()}
+
+    attributes_df = table.select(
+        edge_attributes.values()).rename(rename_attributes)
+
+    edge_table = pl.concat(
+        [source_df, target_df, attributes_df], how='horizontal')
+
+    return edge_table.unique()

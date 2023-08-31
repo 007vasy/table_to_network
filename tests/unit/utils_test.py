@@ -7,7 +7,8 @@ from utils import (
     File2NetworkMap,
     Node2ColMap,
     Edge2ColMap,
-    extract_node_type_from_table
+    extract_node_type_from_table,
+    extract_edge_type_from_table
 )
 import unittest
 
@@ -100,4 +101,33 @@ class TestNodeFileGen(unittest.TestCase):
 
 
     def test_multiple_node_gen(self):
+        pass
+
+class TestEdgeFileGen(unittest.TestCase):
+    def test_singular_edge_gen(self):
+        raw_table = pl.DataFrame({
+            '_source':['Ox000', 'Ox001', 'Ox002', 'Ox000'],
+            '_target':['Ox001', 'Ox002', 'Ox003', 'Ox001'],
+            '_type':['OWNS', 'OWNS', 'OWNS', 'OWNS'],
+        })
+
+        desired_table = pl.DataFrame({
+            'source':['Ox000', 'Ox001', 'Ox002'],
+            'target':['Ox001', 'Ox002', 'Ox003'],
+            'type':['OWNS', 'OWNS', 'OWNS'],
+        })
+
+        edgeColMap = Edge2ColMap(
+            source='_source',
+            target='_target',
+            attributes={
+                'type': '_type'
+            }
+        )
+
+        actual_table = extract_edge_type_from_table(raw_table, edgeColMap)
+
+        assert_frame_equal(desired_table.sort(['source', 'target']), actual_table.sort(['source', 'target']))
+
+    def test_multiple_edge_gen(self):
         pass
