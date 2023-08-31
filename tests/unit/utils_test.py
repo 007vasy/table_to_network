@@ -1,5 +1,7 @@
 import polars as pl
 from polars.testing import assert_frame_equal
+import tempfile
+from pathlib import Path
 
 from utils import (
     parse_config,
@@ -8,9 +10,14 @@ from utils import (
     Node2ColMap,
     Edge2ColMap,
     extract_node_type_from_table,
-    extract_edge_type_from_table
+    extract_edge_type_from_table,
+    NODES_MAP,
+    EDGES_MAP,
+    create_label_file_name,
+    extract_and_merge_x_type
 )
 import unittest
+import pytest
 
 class TestConfig(unittest.TestCase):
     def test_config_parse(self):
@@ -73,6 +80,14 @@ class TestConfig(unittest.TestCase):
 
         self.assertEqual(actual_config, desired_config)
 
+    @pytest.mark.skip(reason='TODO')
+    def test_config_parse_node_consistency(self):
+        pass
+
+    @pytest.mark.skip(reason='TODO')
+    def test_config_parse_edge_consistency(self):
+        pass
+
 class TestNodeFileGen(unittest.TestCase):
     def test_singular_node_gen(self):
         COL_ADDRESS = '_address'
@@ -99,9 +114,59 @@ class TestNodeFileGen(unittest.TestCase):
 
         assert_frame_equal(desired_table.sort('id'), actual_table.sort('id'))
 
+    def test_singular_node_gen_with_file_merge(self):
+        COL_ADDRESS = '_address'
+        ATTRIBUTE_ADDRESS = 'address'
+        raw_table = pl.DataFrame({
+            COL_ADDRESS:['Ox000', 'Ox001', 'Ox002', 'Ox000'],
+        })
+
+        desired_table = pl.DataFrame({
+            'id':['Ox000', 'Ox001', 'Ox002'],
+            ATTRIBUTE_ADDRESS:['Ox000', 'Ox001', 'Ox002'],
+        })
+
+        nodeColMap = Node2ColMap(
+            id=COL_ADDRESS,
+            attributes={
+                ATTRIBUTE_ADDRESS: COL_ADDRESS,
+            }
+        )
+
+        # using tmpdir to test file merge
+        with tempfile.TemporaryDirectory() as tmpdirname:
+            node_label = 'ADDR'
+
+            tmpdir = Path(tmpdirname)
+            tmpfile = tmpdir / create_label_file_name(node_label)
+
+            desired_table.write_parquet(tmpfile)
+
+            extract_and_merge_x_type(raw_table, tmpdir, node_label, nodeColMap)
+
+            updated_table = pl.read_parquet(tmpfile)
+
+            assert_frame_equal(desired_table.sort('id'), updated_table.sort('id'))
+
 
     def test_multiple_node_gen(self):
-        pass
+        nodes_map: NODES_MAP = {
+            'ADDR': Node2ColMap(
+                id='_address',
+                attributes={
+                    'address': '_address',
+                    'type': '_type'
+                }
+            ),
+            'TX': Node2ColMap(
+                id='_tx',
+                attributes={
+                    'tx': '_tx',
+                    'type': '_type'
+                }
+            )
+        }
+
 
 class TestEdgeFileGen(unittest.TestCase):
     def test_singular_edge_gen(self):

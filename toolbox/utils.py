@@ -113,6 +113,10 @@ def get_config(config_path: Path) -> Config:
     return parse_config(raw_config)
 
 
+def create_label_file_name(_label: str, extension: str = 'parquet') -> str:
+    return f'{_label}.{extension}'
+
+
 def extract_node_type_from_table(table: pl.DataFrame, node2colmap: Node2ColMap) -> pl.DataFrame:
     node_id = node2colmap.id
     node_attributes = node2colmap.attributes
@@ -127,6 +131,32 @@ def extract_node_type_from_table(table: pl.DataFrame, node2colmap: Node2ColMap) 
     node_table = pl.concat([id_df, attributes_df], how='horizontal')
 
     return node_table.unique()
+
+
+def extract_and_merge_x_type(table: pl.DataFrame, output_dir: Path, _label: str, _colmap: Abstract2ColMap) -> None:
+
+    file_path = output_dir / create_label_file_name(_label)
+
+    if isinstance(_colmap, Node2ColMap):
+        extracted_table = extract_node_type_from_table(table, _colmap)
+    elif isinstance(_colmap, Edge2ColMap):
+        extracted_table = extract_edge_type_from_table(table, _colmap)
+    else:
+        raise ValueError(f'unknown type {_colmap}')
+
+    if file_path.exists():
+        # if the file exist read it in and merge it with the new data
+        existing_table = pl.read_parquet(file_path)
+        merged_table = pl.concat(
+            [existing_table, extracted_table], how='vertical')
+        merged_table = merged_table.unique()
+    else:
+        merged_table = extracted_table
+
+    # save the file
+    merged_table.write_parquet(file_path)
+
+    logging.debug(f'file saved to {file_path}')
 
 
 def extract_edge_type_from_table(table: pl.DataFrame, edge2colmap: Edge2ColMap) -> pl.DataFrame:
