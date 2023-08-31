@@ -1,1 +1,21 @@
-{}
+{
+    "<file_prefix_for_multi_files>":{
+        "nodes":{
+            "<NODE_LABEL>":{
+                "id":"<table_column_name>",
+                "attributes":{
+                    "<node_attr>":"<table_column_name>"
+                }
+            }
+        },
+        "edges:":{
+            "<EDGE_LABEL>":{
+                "source":"<table_column_name>",
+                "target":"<table_column_name>",
+                "attributes":{
+                    "<edge_attr>":"<table_column_name>"
+                }
+            }
+        }
+    }
+}
