@@ -150,22 +150,9 @@ class TestNodeFileGen(unittest.TestCase):
 
 
     def test_multiple_node_gen(self):
-        nodes_map: NODES_MAP = {
-            'ADDR': Node2ColMap(
-                id='_address',
-                attributes={
-                    'address': '_address',
-                    'type': '_type'
-                }
-            ),
-            'TX': Node2ColMap(
-                id='_tx',
-                attributes={
-                    'tx': '_tx',
-                    'type': '_type'
-                }
-            )
-        }
+        pass
+
+
 
 
 class TestEdgeFileGen(unittest.TestCase):

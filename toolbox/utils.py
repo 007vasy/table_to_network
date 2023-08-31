@@ -4,6 +4,7 @@ from pathlib import Path
 from dataclasses import dataclass
 import json
 import polars as pl
+import glob
 
 from typing import Dict
 
@@ -176,3 +177,24 @@ def extract_edge_type_from_table(table: pl.DataFrame, edge2colmap: Edge2ColMap) 
         [source_df, target_df, attributes_df], how='horizontal')
 
     return edge_table.unique()
+
+
+def extract_from_file(source_file_path: Path, output_dir: Path, file2networkmap: File2NetworkMap) -> None:
+    table = pl.read_parquet(source_file_path)
+
+    for node_type, node_colmap in file2networkmap.nodes.items():
+        extract_and_merge_x_type(table, output_dir, node_type, node_colmap)
+
+    for edge_type, edge_colmap in file2networkmap.edges.items():
+        extract_and_merge_x_type(table, output_dir, edge_type, edge_colmap)
+
+
+def extract_from_folder(source_folder_path: Path, output_dir: Path, folder2networkmap: FOLDER2NETWORKMAP) -> None:
+    for folder, files2networkmap in folder2networkmap.items():
+        source_folder = source_folder_path / folder
+        for file, file2networkmap in files2networkmap.items():
+            # allow for wildcards
+            for filepath in glob.glob(str(source_folder / file)):
+                source_file_path = Path(filepath)
+                extract_from_file(source_file_path,
+                                  output_dir, file2networkmap)
