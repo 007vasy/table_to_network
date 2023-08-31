@@ -2,7 +2,13 @@ from argparse import ArgumentParser
 from pathlib import Path
 import logging
 
-from utils import ROOT_DIR
+from utils import (
+    ROOT_DIR,
+    Config,
+    get_config,
+    extract_from_folder,
+    show_folder_files
+)
 
 
 def parse_args():
@@ -26,7 +32,10 @@ def parse_args():
 def main():
     args = parse_args()
 
-    print(args)
+    config: Config = get_config(args.config)
+
+    extract_from_folder(args.folder, args.output, config)
+    show_folder_files(args.output)
 
 
 if __name__ == '__main__':

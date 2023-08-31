@@ -5,6 +5,7 @@ from dataclasses import dataclass
 import json
 import polars as pl
 import glob
+from tqdm import tqdm
 
 from typing import Dict
 
@@ -68,11 +69,6 @@ class Config:
     folder2networkmap: FOLDER2NETWORKMAP
 
 
-def load_json(path: Path) -> Dict:
-    with open(path) as f:
-        return json.load(f)
-
-
 def parse_config(raw_config: Dict) -> Config:
     folder2networkmap: Dict = {}
     for folder, folder_networkmap in raw_config.items():
@@ -112,6 +108,11 @@ def parse_config(raw_config: Dict) -> Config:
 def get_config(config_path: Path) -> Config:
     raw_config = load_json(config_path)
     return parse_config(raw_config)
+
+
+def load_json(path: Path) -> Dict:
+    with open(path) as f:
+        return json.load(f)
 
 
 def create_label_file_name(_label: str, extension: str = 'parquet') -> str:
@@ -188,13 +189,25 @@ def extract_from_file(source_file_path: Path, output_dir: Path, file2networkmap:
     for edge_type, edge_colmap in file2networkmap.edges.items():
         extract_and_merge_x_type(table, output_dir, edge_type, edge_colmap)
 
+# for key, value in tqdm(d.items(), desc='Processing keys'):
+#     tqdm.write(f'Current key: {key}')
+
 
 def extract_from_folder(source_folder_path: Path, output_dir: Path, folder2networkmap: FOLDER2NETWORKMAP) -> None:
-    for folder, files2networkmap in folder2networkmap.items():
+    for folder, files2networkmap in tqdm(folder2networkmap.items(), desc='Processing folders'):
         source_folder = source_folder_path / folder
-        for file, file2networkmap in files2networkmap.items():
+        for file, file2networkmap in tqdm(files2networkmap.items(), desc=f'Files from folder {folder}', leave=False):
+            tqdm.write(f'File(s): {file}')
             # allow for wildcards
             for filepath in glob.glob(str(source_folder / file)):
                 source_file_path = Path(filepath)
                 extract_from_file(source_file_path,
                                   output_dir, file2networkmap)
+
+
+def show_folder_files(folder: Path) -> None:
+    files = [f for f in folder.iterdir() if f.is_file()]
+
+    # create a bullet list
+    files_str = '\n'.join([f'- {f}' for f in files])
+    logging.info(f'Files in folder {folder}:\n{files_str}')
