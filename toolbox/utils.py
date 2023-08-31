@@ -185,7 +185,7 @@ def merge_dfs(dfs: List[pl.DataFrame]) -> pl.DataFrame:
         converted_dfs = convert_dfs_to_schema(dfs, backup_schema)
 
     # Merge dataframes
-    return pl.concat(converted_dfs, how='vertical')
+    return pl.concat(converted_dfs, how='vertical').unique()
 
 
 def extract_and_merge_x_type(table: pl.DataFrame, output_dir: Path, _label: str, _colmap: Abstract2ColMap) -> None:
@@ -208,7 +208,7 @@ def extract_and_merge_x_type(table: pl.DataFrame, output_dir: Path, _label: str,
         merged_table = extracted_table
 
     # save the file
-    merged_table.unique().write_parquet(file_path)
+    merged_table.write_parquet(file_path)
 
     logging.info(f'file saved to {file_path}')
 
