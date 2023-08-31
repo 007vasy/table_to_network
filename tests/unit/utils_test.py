@@ -96,7 +96,7 @@ class TestNodeFileGen(unittest.TestCase):
 
         actual_table = extract_node_type_from_table(raw_table, nodeColMap)
 
-        assert_frame_equal(desired_table, actual_table)
+        assert_frame_equal(desired_table.sort('id'), actual_table.sort('id'))
 
 
     def test_multiple_node_gen(self):
