@@ -194,5 +194,42 @@ class TestEdgeFileGen(unittest.TestCase):
 
         assert_frame_equal(desired_table.sort(['source', 'target']), actual_table.sort(['source', 'target']))
 
+
+    def test_singular_edge_gen_with_file_merge(self):
+        raw_table = pl.DataFrame({
+            '_source':['Ox000', 'Ox001', 'Ox002', 'Ox000'],
+            '_target':['Ox001', 'Ox002', 'Ox003', 'Ox001'],
+            '_type':['OWNS', 'OWNS', 'OWNS', 'OWNS'],
+        })
+
+        desired_table = pl.DataFrame({
+            'source':['Ox000', 'Ox001', 'Ox002'],
+            'target':['Ox001', 'Ox002', 'Ox003'],
+            'type':['OWNS', 'OWNS', 'OWNS'],
+        })
+
+        edgeColMap = Edge2ColMap(
+            source='_source',
+            target='_target',
+            attributes={
+                'type': '_type'
+            }
+        )
+
+        # using tmpdir to test file merge
+        with tempfile.TemporaryDirectory() as tmpdirname:
+            edge_label = 'OWNS'
+
+            tmpdir = Path(tmpdirname)
+            tmpfile = tmpdir / create_label_file_name(edge_label)
+
+            desired_table.write_parquet(tmpfile)
+
+            extract_and_merge_x_type(raw_table, tmpdir, edge_label, edgeColMap)
+
+            updated_table = pl.read_parquet(tmpfile)
+
+            assert_frame_equal(desired_table.sort(['source', 'target']), updated_table.sort(['source', 'target']))
+
     def test_multiple_edge_gen(self):
         pass
