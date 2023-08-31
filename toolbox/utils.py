@@ -113,10 +113,6 @@ def get_config(config_path: Path) -> Config:
     return parse_config(raw_config)
 
 
-def dummy(a):
-    return a + 1
-
-
 def extract_node_type_from_table(table: pl.DataFrame, node2colmap: Node2ColMap) -> pl.DataFrame:
     node_id = node2colmap.id
     node_attributes = node2colmap.attributes
