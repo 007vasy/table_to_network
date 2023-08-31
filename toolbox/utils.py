@@ -7,7 +7,7 @@ import polars as pl
 import glob
 from tqdm import tqdm
 
-from typing import Dict, List
+from typing import Dict, List, Any
 
 LOGLEVEL_KEY = 'LOGLEVEL'
 logging.basicConfig(
@@ -114,6 +114,11 @@ def parse_config(raw_config: Dict) -> Config:
     )
 
 
+def make_dir(path: Path) -> None:
+    if not path.exists():
+        path.mkdir(parents=True, exist_ok=True)
+
+
 def get_config(config_path: Path) -> Config:
     raw_config = load_json(config_path)
     return parse_config(raw_config)
@@ -144,6 +149,45 @@ def extract_node_type_from_table(table: pl.DataFrame, node2colmap: Node2ColMap) 
     return node_table.unique()
 
 
+def convert_dfs_to_schema(dfs: List[pl.DataFrame], schema: Dict[str, Any]) -> List[pl.DataFrame]:
+    converted_dfs = []
+    for df in dfs:
+        for field, field_data_type in schema.items():
+            column_name = field
+            target_type = field_data_type()
+            if df.schema[field] != target_type:
+                df = df.select(pl.col(column_name).cast(target_type))
+        converted_dfs.append(df)
+
+    return converted_dfs
+
+
+def merge_dfs(dfs: List[pl.DataFrame]) -> pl.DataFrame:
+
+    # Get schemas
+    schemas = [df.schema for df in dfs]
+
+    # Pick schema with less utf8 columns types
+    utf8_count = [len([1 for field_data_type in schema.values()
+                      if field_data_type == pl.Utf8]) for schema in schemas]
+
+    if utf8_count[0] < utf8_count[1]:
+        target_schema, backup_schema = schemas
+    else:
+        target_schema, backup_schema = schemas[::-1]
+
+    # Convert columns in all dataframes to match target_schema
+    try:
+        converted_dfs = convert_dfs_to_schema(dfs, target_schema)
+    except Exception as e:
+        logging.warning(
+            f'Could not convert columns to match target schema. Using backup schema instead. Error: {e}')
+        converted_dfs = convert_dfs_to_schema(dfs, backup_schema)
+
+    # Merge dataframes
+    return pl.concat(converted_dfs, how='vertical')
+
+
 def extract_and_merge_x_type(table: pl.DataFrame, output_dir: Path, _label: str, _colmap: Abstract2ColMap) -> None:
 
     file_path = output_dir / create_label_file_name(_label)
@@ -158,16 +202,15 @@ def extract_and_merge_x_type(table: pl.DataFrame, output_dir: Path, _label: str,
     if file_path.exists():
         # if the file exist read it in and merge it with the new data
         existing_table = pl.read_parquet(file_path)
-        merged_table = pl.concat(
-            [existing_table, extracted_table], how='vertical')
-        merged_table = merged_table.unique()
+        merged_table = merge_dfs([existing_table, extracted_table])
+
     else:
         merged_table = extracted_table
 
     # save the file
-    merged_table.write_parquet(file_path)
+    merged_table.unique().write_parquet(file_path)
 
-    logging.debug(f'file saved to {file_path}')
+    logging.info(f'file saved to {file_path}')
 
 
 def extract_edge_type_from_table(table: pl.DataFrame, edge2colmap: Edge2ColMap) -> pl.DataFrame:
@@ -205,10 +248,13 @@ def extract_from_file(source_file_path: Path, output_dir: Path, file2networkmap:
 
 
 def extract_from_folder(source_folder_path: Path, output_dir: Path, folder2networkmap: FOLDER2NETWORKMAP) -> None:
-    for folder, files2networkmap in tqdm(folder2networkmap.items(), desc='Processing folders'):
+
+    make_dir(output_dir)
+
+    for folder, files2networkmap in tqdm(folder2networkmap.items(), desc=f'Processing subfolders in > {str(source_folder_path).split("/")[-1]}'):
         source_folder = source_folder_path / folder
         for file, file2networkmap in tqdm(files2networkmap.items(), desc=f'Files from folder {folder}', leave=False):
-            tqdm.write(f'File(s): {file}')
+            # tqdm.write(f'File(s): {file}')
             # allow for wildcards
             for filepath in glob.glob(str(source_folder / file)):
                 source_file_path = Path(filepath)

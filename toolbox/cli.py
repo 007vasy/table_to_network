@@ -34,7 +34,7 @@ def main():
 
     config: Config = get_config(args.config)
 
-    extract_from_folder(args.folder, args.output, config)
+    extract_from_folder(args.folder, args.output, config.folder2networkmap)
     show_folder_files(args.output)
 
 
