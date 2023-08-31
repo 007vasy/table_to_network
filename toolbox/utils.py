@@ -19,25 +19,46 @@ ATTRIBUTES = Dict[str, str]
 
 
 @dataclass
-class Node2ColMap:
+class Abstract2ColMap:
+    attributes: ATTRIBUTES
+
+    def _validate_attributes(self):
+        for k, v in self.attributes.items():
+            if not isinstance(k, str):
+                raise ValueError(f'attribute {k} should be a string')
+
+            if not isinstance(v, str):
+                raise ValueError(f'attribute {v} should be a string')
+
+    def __post_init__(self):
+        self._validate_attributes()
+
+
+@dataclass
+class Node2ColMap(Abstract2ColMap):
     id: str
     attributes: ATTRIBUTES
 
 
 @dataclass
-class Edge2ColMap:
+class Edge2ColMap(Abstract2ColMap):
     source: str
     target: str
     attributes: ATTRIBUTES
 
 
+NODES_MAP = Dict[str, Node2ColMap]
+EDGES_MAP = Dict[str, Edge2ColMap]
+
+
 @dataclass
 class File2NetworkMap:
-    nodes: Node2ColMap
-    edges: Edge2ColMap
+    nodes: NODES_MAP
+    edges: EDGES_MAP
 
 
-FOLDER2NETWORKMAP = Dict[str, File2NetworkMap]
+FILES2NETWORKMAP = Dict[str, File2NetworkMap]
+FOLDER2NETWORKMAP = Dict[str, FILES2NETWORKMAP]
 
 
 @dataclass
@@ -58,18 +79,28 @@ def parse_config(raw_config: Dict) -> Config:
         for file, file_networkmap in folder_networkmap.items():
             if file not in folder2networkmap[folder]:
                 folder2networkmap[folder][file] = {}
-            nodes = file_networkmap['nodes']
-            edges = file_networkmap['edges']
-            folder2networkmap[folder][file] = File2NetworkMap(
-                nodes=Node2ColMap(
-                    id=nodes['id'],
-                    attributes=nodes['attributes']
-                ),
-                edges=Edge2ColMap(
-                    source=edges['source'],
-                    target=edges['target'],
-                    attributes=edges['attributes']
+            raw_nodes = file_networkmap.get('nodes', {})
+            raw_edges = file_networkmap.get('edges', {})
+
+            nodes: NODES_MAP = {}
+            edges: EDGES_MAP = {}
+
+            for node_type, node_map in raw_nodes.items():
+                nodes[node_type] = Node2ColMap(
+                    id=node_map['id'],
+                    attributes=node_map['attributes']
                 )
+
+            for edge_type, edge_map in raw_edges.items():
+                edges[edge_type] = Edge2ColMap(
+                    source=edge_map['source'],
+                    target=edge_map['target'],
+                    attributes=edge_map['attributes']
+                )
+
+            folder2networkmap[folder][file] = File2NetworkMap(
+                nodes=nodes,
+                edges=edges
             )
     return Config(
         folder2networkmap=folder2networkmap
