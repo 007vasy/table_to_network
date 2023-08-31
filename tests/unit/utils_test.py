@@ -25,22 +25,22 @@ class TestConfig(unittest.TestCase):
             'bq_exports': {
                 'output_*.json':{
                     'nodes': {
-                        'ADDR':{
+                        'ADDR':[{
                             'id': 'id',
                             'attributes': {
                                 'name': 'name',
                                 'type': 'type'
                             }
-                        }
+                        }]
                     },
                     'edges': {
-                        'OWNS':{
+                        'OWNS':[{
                             'source': 'source',
                             'target': 'target',
                             'attributes': {
                                 'type': 'type'
                             }
-                        }
+                        }]
                     }
                 }
             }
@@ -51,22 +51,22 @@ class TestConfig(unittest.TestCase):
                 'bq_exports': {
                     'output_*.json':File2NetworkMap(
                         nodes={
-                            'ADDR':Node2ColMap(
+                            'ADDR':[Node2ColMap(
                                 id='id',
                                 attributes={
                                     'name': 'name',
                                     'type': 'type'
                                 }
-                            )
+                            )]
                         },
                         edges={
-                            'OWNS':Edge2ColMap(
+                            'OWNS':[Edge2ColMap(
                                 source='source',
                                 target='target',
                                 attributes={
                                     'type': 'type'
                                 }
-                            )
+                            )]
                         }
                     )
                 }
@@ -74,9 +74,9 @@ class TestConfig(unittest.TestCase):
         )
 
         actual_config = parse_config(raw_config)
-        # print("/n/n/")
-        # print(actual_config)
-        # print(desired_config)
+        print('/n/n/')
+        print(actual_config)
+        print(desired_config)
 
         self.assertEqual(actual_config, desired_config)
 

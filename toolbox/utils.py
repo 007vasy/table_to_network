@@ -7,7 +7,7 @@ import polars as pl
 import glob
 from tqdm import tqdm
 
-from typing import Dict
+from typing import Dict, List
 
 LOGLEVEL_KEY = 'LOGLEVEL'
 logging.basicConfig(
@@ -50,8 +50,11 @@ class Edge2ColMap(Abstract2ColMap):
     attributes: ATTRIBUTES
 
 
-NODES_MAP = Dict[str, Node2ColMap]
-EDGES_MAP = Dict[str, Edge2ColMap]
+NODECOLMAPS = List[Node2ColMap]
+EDGECOLMAPS = List[Edge2ColMap]
+
+NODES_MAP = Dict[str, NODECOLMAPS]
+EDGES_MAP = Dict[str, EDGECOLMAPS]
 
 
 @dataclass
@@ -83,18 +86,24 @@ def parse_config(raw_config: Dict) -> Config:
             nodes: NODES_MAP = {}
             edges: EDGES_MAP = {}
 
-            for node_type, node_map in raw_nodes.items():
-                nodes[node_type] = Node2ColMap(
-                    id=node_map['id'],
-                    attributes=node_map['attributes']
-                )
+            for node_type, node_maps in raw_nodes.items():
+                nodes[node_type] = []
+                for node_map in node_maps:
+                    nodes[node_type].append(Node2ColMap(
+                        id=node_map['id'],
+                        attributes=node_map['attributes']
+                    )
+                    )
 
-            for edge_type, edge_map in raw_edges.items():
-                edges[edge_type] = Edge2ColMap(
-                    source=edge_map['source'],
-                    target=edge_map['target'],
-                    attributes=edge_map['attributes']
-                )
+            for edge_type, edge_maps in raw_edges.items():
+                edges[edge_type] = []
+                for edge_map in edge_maps:
+                    edges[edge_type].append(Edge2ColMap(
+                        source=edge_map['source'],
+                        target=edge_map['target'],
+                        attributes=edge_map['attributes']
+                    )
+                    )
 
             folder2networkmap[folder][file] = File2NetworkMap(
                 nodes=nodes,
@@ -183,11 +192,13 @@ def extract_edge_type_from_table(table: pl.DataFrame, edge2colmap: Edge2ColMap) 
 def extract_from_file(source_file_path: Path, output_dir: Path, file2networkmap: File2NetworkMap) -> None:
     table = pl.read_parquet(source_file_path)
 
-    for node_type, node_colmap in file2networkmap.nodes.items():
-        extract_and_merge_x_type(table, output_dir, node_type, node_colmap)
+    for node_type, node_colmaps in file2networkmap.nodes.items():
+        for node_colmap in node_colmaps:
+            extract_and_merge_x_type(table, output_dir, node_type, node_colmap)
 
-    for edge_type, edge_colmap in file2networkmap.edges.items():
-        extract_and_merge_x_type(table, output_dir, edge_type, edge_colmap)
+    for edge_type, edge_colmaps in file2networkmap.edges.items():
+        for edge_colmap in edge_colmaps:
+            extract_and_merge_x_type(table, output_dir, edge_type, edge_colmap)
 
 # for key, value in tqdm(d.items(), desc='Processing keys'):
 #     tqdm.write(f'Current key: {key}')

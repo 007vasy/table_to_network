@@ -7,4 +7,4 @@ toolbox to turn tabular data into nodes and edges using parquet and polars so th
 * [ ] generate Cypher queries to import data into Neo4j
 * [ ] TODO write node id null test
 * [ ] allow empty attributes
-* [ ] allow same node type from the same file form multiple columns
+* [ ] allow same node/edge type from the same file form multiple columns
