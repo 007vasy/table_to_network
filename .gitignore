@@ -162,3 +162,4 @@ cython_debug/
 *Notes.md
 
 configs/*.json
+output_data/*
