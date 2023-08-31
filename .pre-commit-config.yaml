@@ -52,15 +52,15 @@ repos:
     hooks:
       - id: mypy
         additional_dependencies: [types-all]
-  # - repo: local
-  #   hooks:
-  #     - id: pytest-unit-check
-  #       name: pytest-unit-check
-  #       entry: python -m pytest tests/unit -n 10 # (you need to run pre-commit inside a poetry shell)
-  #       language: system
-  #       require_serial: false
-  #       pass_filenames: false
-  #       always_run: true
+  - repo: local
+    hooks:
+      - id: pytest-unit-check
+        name: pytest-unit-check
+        entry: python -m pytest tests/unit -n 10 # (you need to run pre-commit inside a poetry shell)
+        language: system
+        require_serial: false
+        pass_filenames: false
+        always_run: true
 
   # - repo: local
   #   hooks:
