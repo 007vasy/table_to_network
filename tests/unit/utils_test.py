@@ -1,9 +1,13 @@
+import polars as pl
+from polars.testing import assert_frame_equal
+
 from utils import (
     parse_config,
     Config,
     File2NetworkMap,
     Node2ColMap,
-    Edge2ColMap
+    Edge2ColMap,
+    extract_node_type_from_table
 )
 import unittest
 
@@ -70,7 +74,30 @@ class TestConfig(unittest.TestCase):
 
 class TestNodeFileGen(unittest.TestCase):
     def test_singular_node_gen(self):
-        pass
+        COL_ADDRESS = '_address'
+        ATTRIBUTE_ADDRESS = 'address'
+        raw_table = pl.DataFrame({
+            COL_ADDRESS:['Ox000', 'Ox001', 'Ox002', 'Ox000'],
+
+        })
+
+        desired_table = pl.DataFrame({
+            'id':['Ox000', 'Ox001', 'Ox002'],
+            ATTRIBUTE_ADDRESS:['Ox000', 'Ox001', 'Ox002'],
+        })
+
+        nodeColMap = Node2ColMap(
+            id=COL_ADDRESS,
+            attributes={
+                ATTRIBUTE_ADDRESS: COL_ADDRESS,
+            }
+        )
+
+
+        actual_table = extract_node_type_from_table(raw_table, nodeColMap)
+
+        assert_frame_equal(desired_table, actual_table)
+
 
     def test_multiple_node_gen(self):
         pass

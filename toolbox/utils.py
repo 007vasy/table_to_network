@@ -3,6 +3,7 @@ import logging
 from pathlib import Path
 from dataclasses import dataclass
 import json
+import polars as pl
 
 from typing import Dict
 
@@ -114,3 +115,19 @@ def get_config(config_path: Path) -> Config:
 
 def dummy(a):
     return a + 1
+
+
+def extract_node_type_from_table(table: pl.DataFrame, node2colmap: Node2ColMap) -> pl.DataFrame:
+    node_id = node2colmap.id
+    node_attributes = node2colmap.attributes
+
+    id_df = table.select(node_id).rename({node_id: 'id'})
+
+    rename_attributes = {v: k for k, v in node_attributes.items()}
+
+    attributes_df = table.select(
+        node_attributes.values()).rename(rename_attributes)
+
+    node_table = pl.concat([id_df, attributes_df], how='horizontal')
+
+    return node_table.unique()
