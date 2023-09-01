@@ -359,10 +359,10 @@ def convert_parquet_to_csv(parquet_path: Path) -> None:
     csv_path = parquet_path.with_suffix('.csv')
 
     table = pl.read_parquet(parquet_path)
-    table.to_csv(csv_path)
+    table.write_csv(csv_path)
 
 
 def convert_parquet_folder_contents_to_csv(folder_path: Path) -> None:
-    for parquet_path in tqdm(folder_path.glob('*.parquet'), desc='Converting ...'):
-        tqdm.set_postfix({'current_item': parquet_path}, refresh=True)
+    for parquet_path in (pbar := tqdm(folder_path.glob('*.parquet'))):
+        pbar.set_description(f'Converting {parquet_path}')
         convert_parquet_to_csv(parquet_path)
