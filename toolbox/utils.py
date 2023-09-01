@@ -277,7 +277,7 @@ def extract_from_file(source_file_path: Path, output_dir: Path, file2networkmap:
         for edge_colmap in edge_colmaps:
             try:
                 extract_and_merge_x_type(
-                    table, output_dir, node_type, node_colmap)
+                    table, output_dir, edge_type, edge_colmap)
             except MergeDataFrameError as e:
                 logging.error(f'Failed to merge dataframes. Error: {e}')
                 logging.error(
@@ -293,7 +293,7 @@ def extract_from_folder(source_folder_path: Path, output_dir: Path, folder2netwo
         source_folder = source_folder_path / folder
         for file, file2networkmap in files2networkmap.items():
             try:
-                for filepath in tqdm(glob.glob(str(source_folder / file)), desc=f'Files from {folder}/{file}', leave=False):
+                for filepath in tqdm(glob.glob(str(source_folder / file)), desc=f'Files from > {folder}/{file}', leave=False):
                     source_file_path = Path(filepath)
                     extract_from_file(source_file_path,
                                       output_dir, file2networkmap)
