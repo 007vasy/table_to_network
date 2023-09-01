@@ -162,6 +162,10 @@ def convert_dfs_to_schema(dfs: List[pl.DataFrame], schema: Dict[str, Any]) -> Li
     return converted_dfs
 
 
+class MergeDataFrameError(Exception):
+    pass
+
+
 def merge_dfs(dfs: List[pl.DataFrame]) -> pl.DataFrame:
 
     # Get schemas
@@ -185,7 +189,18 @@ def merge_dfs(dfs: List[pl.DataFrame]) -> pl.DataFrame:
         converted_dfs = convert_dfs_to_schema(dfs, backup_schema)
 
     # Merge dataframes
-    return pl.concat(converted_dfs, how='vertical').unique()
+    try:
+        merged_df = pl.concat(converted_dfs, how='vertical').unique()
+    except Exception as e:
+        logging.error(f'Could not merge dataframes. Error: {e}')
+
+        for df in converted_dfs:
+            logging.error(f'df schema: {df.schema}')
+            logging.error(f'df head: {df.head()}')
+
+        raise MergeDataFrameError(str(e)) from e
+
+    return merged_df
 
 
 def extract_and_merge_x_type(table: pl.DataFrame, output_dir: Path, _label: str, _colmap: Abstract2ColMap) -> None:
@@ -210,7 +225,7 @@ def extract_and_merge_x_type(table: pl.DataFrame, output_dir: Path, _label: str,
     # save the file
     merged_table.write_parquet(file_path)
 
-    logging.info(f'file saved to {file_path}')
+    logging.debug(f'file saved or updated to > {file_path}')
 
 
 def extract_edge_type_from_table(table: pl.DataFrame, edge2colmap: Edge2ColMap) -> pl.DataFrame:
@@ -232,19 +247,42 @@ def extract_edge_type_from_table(table: pl.DataFrame, edge2colmap: Edge2ColMap) 
     return edge_table.unique()
 
 
+class ExtractError(Exception):
+    pass
+
+
+class NodeExtractError(ExtractError):
+    pass
+
+
+class EdgeExtractError(ExtractError):
+    pass
+
+
 def extract_from_file(source_file_path: Path, output_dir: Path, file2networkmap: File2NetworkMap) -> None:
     table = pl.read_parquet(source_file_path)
 
     for node_type, node_colmaps in file2networkmap.nodes.items():
         for node_colmap in node_colmaps:
-            extract_and_merge_x_type(table, output_dir, node_type, node_colmap)
+            try:
+                extract_and_merge_x_type(
+                    table, output_dir, node_type, node_colmap)
+            except MergeDataFrameError as e:
+                logging.error(f'Failed to merge dataframes. Error: {e}')
+                logging.error(
+                    f'Failed to process > {source_file_path}. Error: {e}')
+                raise NodeExtractError(str(e)) from e
 
     for edge_type, edge_colmaps in file2networkmap.edges.items():
         for edge_colmap in edge_colmaps:
-            extract_and_merge_x_type(table, output_dir, edge_type, edge_colmap)
-
-# for key, value in tqdm(d.items(), desc='Processing keys'):
-#     tqdm.write(f'Current key: {key}')
+            try:
+                extract_and_merge_x_type(
+                    table, output_dir, node_type, node_colmap)
+            except MergeDataFrameError as e:
+                logging.error(f'Failed to merge dataframes. Error: {e}')
+                logging.error(
+                    f'Failed to process > {source_file_path}. Error: {e}')
+                raise EdgeExtractError(str(e)) from e
 
 
 def extract_from_folder(source_folder_path: Path, output_dir: Path, folder2networkmap: FOLDER2NETWORKMAP) -> None:
@@ -253,13 +291,19 @@ def extract_from_folder(source_folder_path: Path, output_dir: Path, folder2netwo
 
     for folder, files2networkmap in tqdm(folder2networkmap.items(), desc=f'Processing subfolders in > {str(source_folder_path).split("/")[-1]}'):
         source_folder = source_folder_path / folder
-        for file, file2networkmap in tqdm(files2networkmap.items(), desc=f'Files from folder {folder}', leave=False):
-            # tqdm.write(f'File(s): {file}')
-            # allow for wildcards
-            for filepath in glob.glob(str(source_folder / file)):
-                source_file_path = Path(filepath)
-                extract_from_file(source_file_path,
-                                  output_dir, file2networkmap)
+        for file, file2networkmap in files2networkmap.items():
+            try:
+                for filepath in tqdm(glob.glob(str(source_folder / file)), desc=f'Files from {folder}/{file}', leave=False):
+                    source_file_path = Path(filepath)
+                    extract_from_file(source_file_path,
+                                      output_dir, file2networkmap)
+            except ExtractError as e:
+                logging.error(
+                    f'Failed to process > {source_folder}/{file}. Error: {e}')
+
+            except Exception as e:
+                logging.error(
+                    f'Unhandled Error, failed to process > {source_folder}/{file}. Error: {e}')
 
 
 def show_folder_files(folder: Path) -> None:
