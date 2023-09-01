@@ -20,10 +20,6 @@ def parse_args():
     parser.add_argument(
         '--output', help='output folder where the converted files will be stored', required=False, type=Path, default=ROOT_DIR / 'output_data')
 
-    # add flag if you want to convert the output to csv as well
-    parser.add_argument(
-        '--csv', help='flag to convert the output to csv as well', action='store_true')
-
     args = parser.parse_args()
     logging.info(args)
     return args
@@ -35,6 +31,7 @@ def main():
     config: Config = get_config(args.config)
 
     extract_from_folder(args.folder, args.output, config.folder2networkmap)
+
     show_folder_files(args.output)
 
 

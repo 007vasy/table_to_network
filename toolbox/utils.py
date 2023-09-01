@@ -352,3 +352,17 @@ def show_folder_files(folder: Path) -> None:
     # create a bullet list
     files_str = '\n'.join([f'- {f}' for f in files])
     logging.info(f'Files in folder {folder}:\n{files_str}')
+
+
+def convert_parquet_to_csv(parquet_path: Path) -> None:
+
+    csv_path = parquet_path.with_suffix('.csv')
+
+    table = pl.read_parquet(parquet_path)
+    table.to_csv(csv_path)
+
+
+def convert_parquet_folder_contents_to_csv(folder_path: Path) -> None:
+    for parquet_path in tqdm(folder_path.glob('*.parquet'), desc='Converting ...'):
+        tqdm.set_postfix({'current_item': parquet_path}, refresh=True)
+        convert_parquet_to_csv(parquet_path)
