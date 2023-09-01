@@ -282,11 +282,8 @@ def extract_from_file(source_file_path: Path, output_dir: Path, file2networkmap:
                 extract_and_merge_x_type(
                     table, output_dir, node_type, node_colmap)
             except MergeDataFrameError as e:
-                logging.error(f'Failed to merge dataframes. Error: {e}')
-                logging.error(
-                    f'Failed to process > {source_file_path}. Error: {e}')
                 raise NodeExtractError(
-                    f'{node_type} {node_colmap} {str(e)}') from e
+                    f'Failed to process > {source_file_path}. {node_type} {node_colmap} {str(e)}') from e
 
     for edge_type, edge_colmaps in file2networkmap.edges.items():
         for edge_colmap in edge_colmaps:
@@ -294,10 +291,8 @@ def extract_from_file(source_file_path: Path, output_dir: Path, file2networkmap:
                 extract_and_merge_x_type(
                     table, output_dir, edge_type, edge_colmap)
             except MergeDataFrameError as e:
-                logging.warning(
-                    f'Failed to process > {source_file_path}. Error: {e}, type: {type(e).__name__}')
                 raise EdgeExtractError(
-                    f'{edge_type} {edge_colmap} {str(e)}') from e
+                    f'Failed to process > {source_file_path}. {edge_type} {edge_colmap} {str(e)}') from e
 
 
 def extract_from_folder(source_folder_path: Path, output_dir: Path, folder2networkmap: FOLDER2NETWORKMAP) -> None:
