@@ -154,7 +154,7 @@ def convert_dfs_to_schema(dfs: List[pl.DataFrame], schema: Dict[str, Any]) -> Li
     for df in dfs:
         for field, field_data_type in schema.items():
             column_name = field
-            target_type = field_data_type()
+            target_type = field_data_type
             if df.schema[field] != target_type:
                 df = df.select(pl.col(column_name).cast(target_type))
         converted_dfs.append(df)
@@ -279,8 +279,8 @@ def extract_from_file(source_file_path: Path, output_dir: Path, file2networkmap:
                 extract_and_merge_x_type(
                     table, output_dir, edge_type, edge_colmap)
             except MergeDataFrameError as e:
-                logging.error(f'Failed to merge dataframes. Error: {e}')
-                logging.error(
+                logging.warning(f'Failed to merge dataframes. Error: {e}')
+                logging.warning(
                     f'Failed to process > {source_file_path}. Error: {e}')
                 raise EdgeExtractError(str(e)) from e
 
@@ -298,7 +298,7 @@ def extract_from_folder(source_folder_path: Path, output_dir: Path, folder2netwo
                     extract_from_file(source_file_path,
                                       output_dir, file2networkmap)
             except ExtractError as e:
-                logging.error(
+                logging.warning(
                     f'Failed to process > {source_folder}/{file}. Error: {e}')
 
             except Exception as e:
