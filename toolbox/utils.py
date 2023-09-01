@@ -162,7 +162,7 @@ def convert_dfs_to_schema(dfs: List[pl.DataFrame], schema: Dict[str, Any]) -> Li
     converted_dfs = []
 
     for df in dfs:
-        print('before convert schema', df.schema)
+        logging.debug('before convert schema', df.schema)
         for field, field_data_type in schema.items():
             column_name = field
             target_type = field_data_type
@@ -172,7 +172,7 @@ def convert_dfs_to_schema(dfs: List[pl.DataFrame], schema: Dict[str, Any]) -> Li
         converted_dfs.append(df)
 
     for df in converted_dfs:
-        print('after convert schema', df.schema)
+        logging.debug('after convert schema', df.schema)
 
     return converted_dfs
 
@@ -248,11 +248,11 @@ def extract_and_merge_x_type(table: pl.DataFrame, output_dir: Path, _label: str,
     if file_path.exists():
         # if the file exist read it in and merge it with the new data
         existing_table = pl.read_parquet(file_path)
-        print('\n existing table >>\n')
-        print(existing_table.head())
-        print('\n extracted table >>\n')
-        print(extracted_table.head())
-        print('\n end >>\n')
+        logging.debug('\n existing table >>\n')
+        logging.debug(existing_table.head())
+        logging.debug('\n extracted table >>\n')
+        logging.debug(extracted_table.head())
+        logging.debug('\n end >>\n')
         merged_table = merge_dfs([existing_table, extracted_table])
 
     else:
