@@ -36,11 +36,17 @@ class Abstract2ColMap:
     def __post_init__(self):
         self._validate_attributes()
 
+    def get_needed_cols(self) -> List[str]:
+        raise NotImplementedError()
+
 
 @dataclass
 class Node2ColMap(Abstract2ColMap):
     id: str
     attributes: ATTRIBUTES
+
+    def get_needed_cols(self) -> List[str]:
+        return [self.id] + list(self.attributes.values())
 
 
 @dataclass
@@ -48,6 +54,9 @@ class Edge2ColMap(Abstract2ColMap):
     source: str
     target: str
     attributes: ATTRIBUTES
+
+    def get_needed_cols(self) -> List[str]:
+        return [self.source, self.target] + list(self.attributes.values())
 
 
 NODECOLMAPS = List[Node2ColMap]
@@ -166,6 +175,10 @@ class MergeDataFrameError(Exception):
     pass
 
 
+class SchemaMismatchError(MergeDataFrameError):
+    pass
+
+
 def merge_dfs(dfs: List[pl.DataFrame]) -> pl.DataFrame:
 
     # Get schemas
@@ -203,9 +216,21 @@ def merge_dfs(dfs: List[pl.DataFrame]) -> pl.DataFrame:
     return merged_df
 
 
+def is_needed_cols_in_table(table_cols: List[str], cols: List[str]) -> bool:
+    for col in cols:
+        if col not in table_cols:
+            return False
+
+    return True
+
+
 def extract_and_merge_x_type(table: pl.DataFrame, output_dir: Path, _label: str, _colmap: Abstract2ColMap) -> None:
 
     file_path = output_dir / create_label_file_name(_label)
+
+    if not is_needed_cols_in_table(table.columns, _colmap.get_needed_cols()):
+        raise SchemaMismatchError(
+            f'Table schema: {table.schema}, needed cols: {_colmap.get_needed_cols()}')
 
     if isinstance(_colmap, Node2ColMap):
         extracted_table = extract_node_type_from_table(table, _colmap)
@@ -228,23 +253,12 @@ def extract_and_merge_x_type(table: pl.DataFrame, output_dir: Path, _label: str,
     logging.debug(f'file saved or updated to > {file_path}')
 
 
-def check_cols_in_table(table_cols: List[str], cols: List[str]) -> bool:
-    for col in cols:
-        if col not in table_cols:
-            return False
-
-    return True
-
-
 def extract_edge_type_from_table(table: pl.DataFrame, edge2colmap: Edge2ColMap) -> pl.DataFrame:
 
     source = edge2colmap.source
     target = edge2colmap.target
     edge_attributes = edge2colmap.attributes
 
-    # needed_cols = [source, target, *edge_attributes.values()]
-
-    # if check_cols_in_table(table.columns, needed_cols):
     source_df = table.select(source).rename({source: 'source'})
     target_df = table.select(target).rename({target: 'target'})
 
@@ -257,8 +271,6 @@ def extract_edge_type_from_table(table: pl.DataFrame, edge2colmap: Edge2ColMap) 
         [source_df, target_df, attributes_df], how='horizontal')
 
     return edge_table.unique()
-    # else:
-    #     raise ValueError(f'edge columns {needed_cols} not in table {table.columns}')
 
 
 class ExtractError(Exception):
@@ -302,12 +314,17 @@ def extract_from_folder(source_folder_path: Path, output_dir: Path, folder2netwo
     for folder, files2networkmap in tqdm(folder2networkmap.items(), desc=f'Processing subfolders in > {str(source_folder_path).split("/")[-1]}'):
         source_folder = source_folder_path / folder
         for file, file2networkmap in files2networkmap.items():
-            for filepath in tqdm(glob.glob(str(source_folder / file)), desc=f'Files from > {folder}/{file}', leave=False):
+            for filepath in tqdm(glob.glob(str(source_folder / file)), desc=f'Files from > {folder}/{file}', leave=True):
                 try:
                     source_file_path = Path(filepath)
                     extract_from_file(source_file_path,
                                       output_dir, file2networkmap)
                 except ExtractError as e:
+                    logging.warning(
+                        f'Failed to process > {str(filepath)}. Error: {e} , type: {type(e).__name__}')
+                    break
+
+                except SchemaMismatchError as e:
                     logging.warning(
                         f'Failed to process > {str(filepath)}. Error: {e} , type: {type(e).__name__}')
                     break
