@@ -160,13 +160,19 @@ def extract_node_type_from_table(table: pl.DataFrame, node2colmap: Node2ColMap) 
 
 def convert_dfs_to_schema(dfs: List[pl.DataFrame], schema: Dict[str, Any]) -> List[pl.DataFrame]:
     converted_dfs = []
+
     for df in dfs:
+        print('before convert schema', df.schema)
         for field, field_data_type in schema.items():
             column_name = field
             target_type = field_data_type
             if df.schema[field] != target_type:
-                df = df.select(pl.col(column_name).cast(target_type))
+                df = df.select([pl.col(column_name).cast(
+                    target_type) if column == column_name else column for column in df.columns])
         converted_dfs.append(df)
+
+    for df in converted_dfs:
+        print('after convert schema', df.schema)
 
     return converted_dfs
 
@@ -242,6 +248,11 @@ def extract_and_merge_x_type(table: pl.DataFrame, output_dir: Path, _label: str,
     if file_path.exists():
         # if the file exist read it in and merge it with the new data
         existing_table = pl.read_parquet(file_path)
+        print('\n existing table >>\n')
+        print(existing_table.head())
+        print('\n extracted table >>\n')
+        print(extracted_table.head())
+        print('\n end >>\n')
         merged_table = merge_dfs([existing_table, extracted_table])
 
     else:
@@ -314,7 +325,7 @@ def extract_from_folder(source_folder_path: Path, output_dir: Path, folder2netwo
     for folder, files2networkmap in tqdm(folder2networkmap.items(), desc=f'Processing subfolders in > {str(source_folder_path).split("/")[-1]}'):
         source_folder = source_folder_path / folder
         for file, file2networkmap in files2networkmap.items():
-            for filepath in tqdm(glob.glob(str(source_folder / file)), desc=f'Files from > {folder}/{file}', leave=True):
+            for filepath in tqdm(glob.glob(str(source_folder / file)), desc=f'Files from > {folder}/{file}', leave=False):
                 try:
                     source_file_path = Path(filepath)
                     extract_from_file(source_file_path,
