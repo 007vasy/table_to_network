@@ -228,11 +228,23 @@ def extract_and_merge_x_type(table: pl.DataFrame, output_dir: Path, _label: str,
     logging.debug(f'file saved or updated to > {file_path}')
 
 
+def check_cols_in_table(table_cols: List[str], cols: List[str]) -> bool:
+    for col in cols:
+        if col not in table_cols:
+            return False
+
+    return True
+
+
 def extract_edge_type_from_table(table: pl.DataFrame, edge2colmap: Edge2ColMap) -> pl.DataFrame:
+
     source = edge2colmap.source
     target = edge2colmap.target
     edge_attributes = edge2colmap.attributes
 
+    # needed_cols = [source, target, *edge_attributes.values()]
+
+    # if check_cols_in_table(table.columns, needed_cols):
     source_df = table.select(source).rename({source: 'source'})
     target_df = table.select(target).rename({target: 'target'})
 
@@ -245,6 +257,8 @@ def extract_edge_type_from_table(table: pl.DataFrame, edge2colmap: Edge2ColMap) 
         [source_df, target_df, attributes_df], how='horizontal')
 
     return edge_table.unique()
+    # else:
+    #     raise ValueError(f'edge columns {needed_cols} not in table {table.columns}')
 
 
 class ExtractError(Exception):
@@ -271,7 +285,8 @@ def extract_from_file(source_file_path: Path, output_dir: Path, file2networkmap:
                 logging.error(f'Failed to merge dataframes. Error: {e}')
                 logging.error(
                     f'Failed to process > {source_file_path}. Error: {e}')
-                raise NodeExtractError(str(e)) from e
+                raise NodeExtractError(
+                    f'{node_type} {node_colmap} {str(e)}') from e
 
     for edge_type, edge_colmaps in file2networkmap.edges.items():
         for edge_colmap in edge_colmaps:
@@ -279,10 +294,10 @@ def extract_from_file(source_file_path: Path, output_dir: Path, file2networkmap:
                 extract_and_merge_x_type(
                     table, output_dir, edge_type, edge_colmap)
             except MergeDataFrameError as e:
-                logging.warning(f'Failed to merge dataframes. Error: {e}')
                 logging.warning(
-                    f'Failed to process > {source_file_path}. Error: {e}')
-                raise EdgeExtractError(str(e)) from e
+                    f'Failed to process > {source_file_path}. Error: {e}, type: {type(e).__name__}')
+                raise EdgeExtractError(
+                    f'{edge_type} {edge_colmap} {str(e)}') from e
 
 
 def extract_from_folder(source_folder_path: Path, output_dir: Path, folder2networkmap: FOLDER2NETWORKMAP) -> None:
@@ -292,18 +307,20 @@ def extract_from_folder(source_folder_path: Path, output_dir: Path, folder2netwo
     for folder, files2networkmap in tqdm(folder2networkmap.items(), desc=f'Processing subfolders in > {str(source_folder_path).split("/")[-1]}'):
         source_folder = source_folder_path / folder
         for file, file2networkmap in files2networkmap.items():
-            try:
-                for filepath in tqdm(glob.glob(str(source_folder / file)), desc=f'Files from > {folder}/{file}', leave=False):
+            for filepath in tqdm(glob.glob(str(source_folder / file)), desc=f'Files from > {folder}/{file}', leave=False):
+                try:
                     source_file_path = Path(filepath)
                     extract_from_file(source_file_path,
                                       output_dir, file2networkmap)
-            except ExtractError as e:
-                logging.warning(
-                    f'Failed to process > {source_folder}/{file}. Error: {e}')
+                except ExtractError as e:
+                    logging.warning(
+                        f'Failed to process > {str(filepath)}. Error: {e} , type: {type(e).__name__}')
+                    break
 
-            except Exception as e:
-                logging.error(
-                    f'Unhandled Error, failed to process > {source_folder}/{file}. Error: {e}')
+                except Exception as e:
+                    logging.error(
+                        f'Unhandled Error, failed to process > {str(filepath)}. Error: {e}, type: {type(e).__name__}')
+                    raise e
 
 
 def show_folder_files(folder: Path) -> None:
