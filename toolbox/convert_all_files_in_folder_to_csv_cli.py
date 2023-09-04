@@ -4,7 +4,7 @@ import logging
 
 from utils import (
     convert_parquet_folder_contents_to_csv,
-    show_folder_files
+    show_folder_files_stats
 )
 
 
@@ -23,7 +23,7 @@ def main():
 
     convert_parquet_folder_contents_to_csv(args.folder)
 
-    show_folder_files(args.folder)
+    show_folder_files_stats(args.folder)
 
 
 if __name__ == '__main__':

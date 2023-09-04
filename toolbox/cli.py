@@ -7,7 +7,7 @@ from utils import (
     Config,
     get_config,
     extract_from_folder,
-    show_folder_files
+    show_folder_files_stats
 )
 
 
@@ -32,7 +32,7 @@ def main():
 
     extract_from_folder(args.folder, args.output, config.folder2networkmap)
 
-    show_folder_files(args.output)
+    show_folder_files_stats(args.output)
 
 
 if __name__ == '__main__':

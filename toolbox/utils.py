@@ -346,12 +346,17 @@ def extract_from_folder(source_folder_path: Path, output_dir: Path, folder2netwo
                     raise e
 
 
-def show_folder_files(folder: Path) -> None:
-    files = [f for f in folder.iterdir() if f.is_file()]
+def list_folder_files(folder: Path) -> List[Path]:
+    return [f for f in folder.iterdir() if f.is_file() and f.suffix == '.parquet']
 
-    # create a bullet list
-    files_str = '\n'.join([f'- {f}' for f in files])
-    logging.info(f'Files in folder {folder}:\n{files_str}')
+
+def show_folder_files_stats(folder: Path) -> None:
+    files = list_folder_files(folder)
+
+    # show row count for each file
+    for file in files:
+        table = pl.read_parquet(file)
+        logging.info(f'{file} rows: {len(table)}')
 
 
 def convert_parquet_to_csv(parquet_path: Path) -> None:
