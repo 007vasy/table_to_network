@@ -155,7 +155,7 @@ def extract_node_type_from_table(table: pl.DataFrame, node2colmap: Node2ColMap) 
 
     node_table = pl.concat([id_df, attributes_df], how='horizontal')
 
-    return node_table.unique()
+    return node_table.unique(subset=['id'], keep='last')
 
 
 def convert_dfs_to_schema(dfs: List[pl.DataFrame], schema: Dict[str, Any]) -> List[pl.DataFrame]:
@@ -281,7 +281,7 @@ def extract_edge_type_from_table(table: pl.DataFrame, edge2colmap: Edge2ColMap) 
     edge_table = pl.concat(
         [source_df, target_df, attributes_df], how='horizontal')
 
-    return edge_table.unique()
+    return edge_table.unique(subset=['source', 'target'], keep='last')
 
 
 class ExtractError(Exception):
@@ -318,13 +318,13 @@ def extract_from_file(source_file_path: Path, output_dir: Path, file2networkmap:
                     f'Failed to process > {source_file_path}. {edge_type} {edge_colmap} {str(e)}') from e
 
 
-def extract_from_folder(source_folder_path: Path, output_dir: Path, folder2networkmap: FOLDER2NETWORKMAP) -> None:
+def extract_from_folder(source_folder_path: Path, output_dir: Path, config: Config) -> None:
 
     make_dir(output_dir)
 
-    for folder, files2networkmap in tqdm(folder2networkmap.items(), desc=f'Processing subfolders in > {str(source_folder_path).split("/")[-1]}'):
+    for folder, files_2networkmap in tqdm(config.folder2networkmap.items(), desc=f'Processing subfolders in > {str(source_folder_path).split("/")[-1]}'):
         source_folder = source_folder_path / folder
-        for file, file2networkmap in files2networkmap.items():
+        for file, file2networkmap in files_2networkmap.items():
             for filepath in tqdm(glob.glob(str(source_folder / file)), desc=f'Files from > {folder}/{file}', leave=False):
                 try:
                     source_file_path = Path(filepath)
@@ -344,6 +344,8 @@ def extract_from_folder(source_folder_path: Path, output_dir: Path, folder2netwo
                     logging.error(
                         f'Unhandled Error, failed to process > {str(filepath)}. Error: {e}, type: {type(e).__name__}')
                     raise e
+
+    # remove_non_trivial_duplicates_from_folder(output_dir, config)
 
 
 def list_folder_files(folder: Path) -> List[Path]:
