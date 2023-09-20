@@ -160,3 +160,7 @@ cython_debug/
 #.idea/
 
 *Notes.md
+
+configs/*.json
+output_data/*
+.DS_Store
